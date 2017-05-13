@@ -88,7 +88,7 @@ int main(int argc, const char * argv[]) {
 
         switch(recv_cmd.type) {
             case GESTURE_DATA: {
-                inject_touch(&recv_cmd.gesture);
+                inject_touch(&recv_cmd);
                 break;
             }
             case GESTURE_QUIT:
@@ -100,7 +100,7 @@ int main(int argc, const char * argv[]) {
     }
 
     updd_stop();
-    printf("[\033[0;32mo\033[0m] Stopped UPDD connection...");
+    printf("[\033[0;32mo\033[0m] Stopped UPDD connection...\n");
     
     shutdown(fd, SHUT_RDWR);
     printf("[\033[0;32mo\033[0m] Disconnect to kernel...\n");    
