@@ -6,8 +6,10 @@
 #include <sys/ioctl.h>
 #include <sys/kern_control.h>
 #include <sys/kern_event.h>
+#include <csignal>
 
-#include "csgesture-softc.h"
+#include <thread>
+
 #include "updd.h"
 #include "VoodooI2CClient.h"
 
@@ -17,7 +19,7 @@ Following code is based on EchoKext (https://github.com/kentwelcome/EchoKext) by
 
 int fd = 0;
 
-void disconnectWithKernel()
+void disconnectWithKernel(int i)
 {
     printf("[\033[0;32mo\033[0m] Disconnect to kernel...\n");
     shutdown(fd, SHUT_RDWR);
@@ -55,7 +57,7 @@ int main(int argc, const char * argv[]) {
     addr.sc_unit    = 0;
     
     updd_start();
-    printf("[\033[0;32mo\033[0m] Created UPDD connection...");
+    printf("[\033[0;32mo\033[0m] Created UPDD connection...\n");
 
     printf("[\033[0;32mo\033[0m] Create socket... fd=%d\n",fd);
     
@@ -88,7 +90,11 @@ int main(int argc, const char * argv[]) {
 
         switch(recv_cmd.type) {
             case GESTURE_DATA: {
-                inject_touch(&recv_cmd);
+                struct csgesture_softc *sc = new csgesture_softc();
+                memcpy(sc, &recv_cmd.gesture, sizeof(struct csgesture_softc));
+
+                std::thread inject_thread(inject_touch, sc);
+                inject_thread.detach();
                 break;
             }
             case GESTURE_QUIT:

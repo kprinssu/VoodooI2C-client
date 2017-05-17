@@ -1,7 +1,7 @@
 #ifndef UPDD_H
 #define UPDD_H
 
-#include "csgesture-softc.h"
+struct csgesture_softc;
 
 void updd_start();
 void updd_stop();
