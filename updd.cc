@@ -8,12 +8,6 @@
 #include <unistd.h>
 #include <mutex>
 
-#ifdef __cplusplus
-extern "C" {
-	#include "TouchEvents.h"
-}
-#endif
-
 using namespace std;
 
 bool keep_running = true;
@@ -45,23 +39,21 @@ void updd_start() {
 	sc_old.y[0] = -1;
 }
 
-/*
+
 void normalised_inject_touch(int x, int y, int resx, int resy, int finger, bool touching) {
 	HTBDEVICE device = TBApiGetRelativeDevice(0);
 	//int screen_width, screen_height;
 	//get_screen_resolution(&screen_width, &screen_height);
-
 	
 	inject_touch_lock.lock();
-	float x1 = (x * 1.0f / resx) * 1600;
-	float y2 = (y * 1.0f / resy) * 900; 
+	float x1 = (x * 1.0f / resx) * 3264;
+	float y2 = (y * 1.0f / resy) * 1856; 
 
-	printf("Touch(%d): %f %f\n", finger, x1, y2 );
+	printf("Touch(%d | %d): %f %f\n", finger, touching, x1, y2 );
 
-	
-	TBApiInjectTouch(device, x, y , finger, touching);
+	TBApiInjectTouch(device, (int)x1, (int)y2, finger, touching);
 	inject_touch_lock.unlock();
-} */
+}
 
 void inject_touch(struct csgesture_softc* sc) {
 	if(!updd_connected) return;
@@ -100,6 +92,9 @@ void inject_touch(struct csgesture_softc* sc) {
 
     int old_dx = sc_old.x[0] - sc_old.lastx[0];
     int old_dy = sc_old.y[0] - sc_old.lasty[0];
+
+    int old_dx_2f = sc_old.x[1] - sc_old.lastx[1];
+    int old_dy_2f = sc_old.y[1] - sc_old.lasty[1];
 
    //printf("Data %d %d | %d %d\n", dx, dy, old_dx, old_dy);
 
@@ -152,27 +147,22 @@ void inject_touch(struct csgesture_softc* sc) {
 		//printf("Start %f %f\n", sc->x[0] / (float)sc->resx * 1600, SCREEN_NORMALISE(sc->x[0], sc->resx, 900));
 
 		bool test = sc_old.panningActive;
-		if(dx != 0 && dy != 0) {
+		if(dx != 0 && dy != 0 && nfingers == 1) {
 			move_mouse(start_touch);
 			sc->panningActive = true;
+		} else if(nfingers > 1) {
+			for(int i = 0; i < nfingers; i++) {
+				normalised_inject_touch(sc->x[i], sc->y[i], sc->resx, sc->resy, i, true);
+			}
 		}
 
 		sc->panningActive = sc->panningActive || sc_old.panningActive;
 
-		printf("Move mouse: %d->%d %f %f\n", test, sc_old.panningActive, start_touch.x, start_touch.y);
-
 		//TBApiInjectTouch(device, start_touch.x + dx, start_touch.y + dx, 0, true);
 		//TBApiInjectTouch(device, sc->x[3], sc->y[3], 3, true);
 	} else if(!pressed) {
-		//CGPoint current_mps = current_mouse_pos();
-		//printf("Last position %f %f\n",current_mps.x, current_mps.y);
-		//TBApiInjectTouch(device, (int)current_mps.x, (int)current_mps.y, 0, false);
-		//TBApiInjectTouch(device, sc_old.x[1], sc_old.y[1], 1, false);
-		//TBApiInjectTouch(device, sc_old.x[2], sc_old.y[2], 2, false);
-		//TBApiInjectTouch(device, sc_old.x[3], sc_old.y[3], 3, false);
-		//printf("Stopped touch (%f %f)\n", current_mps.x, current_mps.y);
 
-		if(old_dx == 0 && old_dy == 0 && !sc_old.panningActive) {
+		if(old_dx == 0 && old_dy == 0 && !sc_old.panningActive && old_nfingers == 1) {
 			start_touch.x -= (dx);
 			start_touch.y -= (dy);
 
@@ -184,11 +174,18 @@ void inject_touch(struct csgesture_softc* sc) {
 					break;
 				}
 				case 2: {
+					if(old_dx_2f > 0 || old_dy_2f > 0) break;
 					right_mouse_press(start_touch);
 					usleep(1000);
 					right_mouse_release(start_touch);
 					break;
 				}
+			}
+		} 
+
+		if(old_nfingers > 1) {
+			for(int i = 0; i < old_nfingers; i++) {
+				normalised_inject_touch(sc_old.x[i], sc_old.y[i], sc->resx, sc->resy, i, false);
 			}
 		}
 
@@ -200,44 +197,6 @@ void inject_touch(struct csgesture_softc* sc) {
 
 		//start_touch = current_mouse_pos();
 	}
-/*
-	// 3 finger
-	//printf("Touch %d %d\n", sc->x[2], sc->y[2]);
-	if(sc->x[2] != -1 && sc->y[2] != -1) {
-		multi_touch = true;
-		normalised_inject_touch(sc->x[2], sc->y[2], sc->resx, sc->resy, 2, true);
-	} else if(multi_touch && sc_old.x[2] == -1 && sc_old.y[2] == -1) {
-		multi_touch = false;
-		normalised_inject_touch(sc_old.x[2], sc_old.y[2], sc->resx, sc->resy, 2, false);
-	} 
-
-	// first finger
-	if(multi_touch && sc->x[0] != -1 && sc->y[0] != -1) {
-		normalised_inject_touch(sc->x[0], sc->y[0], sc->resx, sc->resy, 0, true);
-	} else if(multi_touch && sc_old.x[0] != -1 && sc_old.y[0] != -1) {
-		normalised_inject_touch(sc_old.x[0], sc_old.y[0], sc->resx, sc->resy, 0, false);
-	}
-
-	// second finger
-	if(multi_touch && sc->x[1] != -1 && sc->y[1] != -1) {
-		normalised_inject_touch(sc->x[1], sc->y[1], sc->resx, sc->resy, 1, true);
-	} else if(multi_touch && multi_touch && sc_old.x[1] != -1 && sc_old.y[1] != -1) {
-		normalised_inject_touch(sc_old.x[1], sc_old.y[1], sc->resx, sc->resy, 1, false);
-	}
-
-	// fourth finger
-	if(multi_touch && sc->x[3] != -1 && sc->y[3] != -1) {
-		normalised_inject_touch(sc->x[3], sc->y[3], sc->resx, sc->resy, 3, true);
-	} else if(multi_touch && sc_old.x[3] != -1 && sc_old.y[3] != -1) {
-		normalised_inject_touch(sc_old.x[3], sc_old.y[3], sc->resx, sc->resy, 3, false);
-	}
-
-	// fifth finger
-	if(multi_touch && sc->x[4] != -1 && sc->y[4] != -1) {
-		normalised_inject_touch(sc->x[4], sc->y[4], sc->resx, sc->resy, 4, true);
-	} else if(multi_touch && sc_old.x[4] != -1 && sc_old.y[4] != -1) {
-		normalised_inject_touch(sc_old.x[4], sc_old.y[4], sc->resx, sc->resy, 4, false);
-	} */
 
 	inject_touch_lock.lock();
 	memcpy(sc->lastx, sc_old.x, 15);
