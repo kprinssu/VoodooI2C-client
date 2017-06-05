@@ -7,6 +7,7 @@
 #include <sys/kern_control.h>
 #include <sys/kern_event.h>
 #include <csignal>
+#include <unistd.h>
 
 #include <thread>
 
@@ -44,10 +45,12 @@ int main(int argc, const char * argv[]) {
     bzero(&ctlInfo, sizeof(struct ctl_info));
     strcpy(ctlInfo.ctl_name, GESTURE_CTL_NAME);
     
-    if (ioctl(fd, CTLIOCGINFO, &ctlInfo) == -1) {
-        exit(0);
+    for(;;) {
+        
+        if (ioctl(fd, CTLIOCGINFO, &ctlInfo) == -1) {
+            usleep(100);
+        } else break;
     }
-    
     // Init
     bzero(&addr, sizeof(addr));
     addr.sc_len     = sizeof(addr);
