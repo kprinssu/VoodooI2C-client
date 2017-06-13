@@ -45,11 +45,12 @@ int main(int argc, const char * argv[]) {
     bzero(&ctlInfo, sizeof(struct ctl_info));
     strcpy(ctlInfo.ctl_name, GESTURE_CTL_NAME);
     
-    for(;;) {
-        
-        if (ioctl(fd, CTLIOCGINFO, &ctlInfo) == -1) {
-            usleep(100);
-        } else break;
+    for(;;) {    
+        if (ioctl(fd, CTLIOCGINFO, &ctlInfo) != -1) {
+            break;
+        }
+
+        usleep(100);
     }
     // Init
     bzero(&addr, sizeof(addr));
