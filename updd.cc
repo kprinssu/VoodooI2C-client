@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include <unistd.h>
 
-using namespace std;
-
 bool keep_running = true;
 bool updd_connected = false;
 
@@ -43,14 +41,12 @@ void normalised_inject_touch(int x, int y, int resx, int resy, int finger, bool 
 	//int screen_width, screen_height;
 	//get_screen_resolution(&screen_width, &screen_height);
 	
-	inject_touch_lock.lock();
 	float x1 = (x * 1.0f / resx) * 3264;
 	float y2 = (y * 1.0f / resy) * 1856; 
 
 	printf("Touch(%d | %d): %f %f\n", finger, touching, x1, y2 );
 
 	TBApiInjectTouch(device, (int)x1, (int)y2, finger, touching);
-	inject_touch_lock.unlock();
 }
 
 void inject_touch(struct csgesture_softc* sc) {
