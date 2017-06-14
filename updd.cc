@@ -12,7 +12,6 @@ bool updd_connected = false;
 #define MAX_FINGERS 5
 #define SCREEN_NORMALISE(value, physical_size, screen_size) ((float)value / physical_size) * screen_size
 
-static struct csgesture_softc sc_first;
 static struct csgesture_softc sc_old;
 static bool gestures[MAX_FINGERS];
 
@@ -38,8 +37,6 @@ void updd_start() {
 
 void normalised_inject_touch(int x, int y, int resx, int resy, int finger, bool touching) {
 	HTBDEVICE device = TBApiGetRelativeDevice(0);
-	//int screen_width, screen_height;
-	//get_screen_resolution(&screen_width, &screen_height);
 	
 	float x1 = (x * 1.0f / resx) * 3264;
 	float y2 = (y * 1.0f / resy) * 1856; 
@@ -52,17 +49,13 @@ void normalised_inject_touch(int x, int y, int resx, int resy, int finger, bool 
 void inject_touch(struct csgesture_softc* sc) {
 	if(!updd_connected) return;
 
-	
+	// start a new gesture
 	if(sc_old.x[0] == -1 && sc_old.y[0] == -1) {
-		
-		//start_touch = current_mouse_pos();
-		//printf("Starting new touch (%f %f)\n", start_touch.x, start_touch.y);
 
 		for(int i = 0; i < MAX_FINGERS; i++) {
 			gestures[i] = false;
 		}
 
-		memcpy(&sc_first, sc, sizeof(struct csgesture_softc));
 		memcpy(&sc_old, sc, sizeof(struct csgesture_softc));
 
 		delete sc;
@@ -70,6 +63,7 @@ void inject_touch(struct csgesture_softc* sc) {
 		return;
 	}
 
+	// inject touches
 	if(sc->x[0] != -1 && sc->y[0] != -1) {
 		for(int i = 0; i < MAX_FINGERS; i++) {
 			if(sc->x[i] != -1) {
@@ -90,10 +84,8 @@ void inject_touch(struct csgesture_softc* sc) {
 	memcpy(&sc_old, sc, sizeof(struct csgesture_softc));
 
 	delete sc;
-	//pthread_mutex_unlock(&inject_touch_lock);
 }
 
-// 
 void updd_stop() {
 	TBApiUnregisterEvent(connected_callback);
 	TBApiClose();
